@@ -4,9 +4,6 @@ import geometry as gm
 
 class function(object):
 
-    def point_value(self,point):
-        return None
-
     def eval(self, p):
         return None
 
@@ -59,7 +56,7 @@ class zero(constant):
         self.c = 0.0
 
 
-class sin(function):
+class Sin(function):
 
     def __init__(self, a, b, c):
         assert all([isinstance(x, float) for x in [a,b,c]])
@@ -80,10 +77,10 @@ class sin(function):
 
     def segment_int(self, line, num = 0):
         T, u = line.transport()
-        return sin(self.vector.dot(T), 0, self.vector.dot(u) + self.c).base_line_int(num)*line.length()
+        return Sin(self.vector.dot(T), 0, self.vector.dot(u) + self.c).base_line_int(num)*line.length()
 
     def base_triangle_int(self):
-        return ((self.a**2 - self.b**2)*np.cos(c) + (self.b**2)*np.cos(self.a + self.c) -
+        return ((self.a**2 - self.b**2)*np.cos(self.c) + (self.b**2)*np.cos(self.a + self.c) -
                 self.a*(self.b*(self.a - self.b)*np.sin(self.c) +
                         self.a*np.cos(self.b + self.c)))/(self.a**2*self.b**2*(self.a - self.b))
 
@@ -91,11 +88,11 @@ class sin(function):
         T, u = t.transport(p0)
         v = self.vector.dot(T)
         c = self.vector.dot(u) + self.c
-        return sin(v[0], v[1], c).base_triangle_int()*np.linalg.det(T)
+        return Sin(v[0], v[1], c).base_triangle_int()*np.linalg.det(T)
 
     def __eq__(self, other):
-        if isinstance(other, sin):
-            return self.vector == other.vector && self.c == other.c
+        if isinstance(other, Sin):
+            return self.vector == other.vector and self.c == other.c
         return False
 
     def __ne__(self, other):
@@ -163,7 +160,7 @@ class element(function):
             return t.size()/6
         return t.size()/12
 
-    def grad_int(self, elem, t):
+    def grad_int(self, elem):
         triangles = [t for t in self.triangles if t in elem.triangles]
         return sum([self.grad(t).reshape(2,1).dot(elem.grad(t).reshape(1,2))*t.size() for t in triangles])
 
