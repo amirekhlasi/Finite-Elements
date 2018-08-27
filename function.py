@@ -58,7 +58,7 @@ class zero(constant):
 
 class Sin(function):
 
-    def __init__(self, a, b, c):
+    def __init__(self, a, b, c = 0.0):
         assert all([isinstance(x, float) for x in [a,b,c]])
         self.a = a
         self.b = b
