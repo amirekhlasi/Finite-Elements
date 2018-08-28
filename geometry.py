@@ -67,19 +67,19 @@ class triangle(object):
         self.params = [p.params for p in self.points]
         self.np_params = np.array(self.params)
 
-
-
-    def isinide(self, p0):
+    def isinside(self, p0):
         a = self.np_params - p0.np_params
         b = [np.sign(np.linalg.det(a[[0,1],:])), np.sign(np.linalg.det(a[[1,2],:])), np.sign(np.linalg.det(a[[2,0],:]))]
         return all([x == 1 for x in b]) or any([x == 0 for x in b])
 
     def transport(self, p0):
-        p0 = p0.np_params
-        T = self.np_params[self.np_params != p0] - p0
+        i = self.points.index(p0)
+        rows = [True]*3
+        rows[i] = False
+        T = self.np_params[rows]
         if np.linalg.det(T) < 0:
             T = T[[1,0]]
-        return T.transpose(), p0
+        return T.transpose(), p0.np_params
 
     def vertices(self):
         return list(self.points).copy()
@@ -88,7 +88,7 @@ class triangle(object):
         return triangle([point(p.params) for p in self.np_params[rot,:]])
 
     def size(self):
-        return 0.5*np.abs(np.linalg.det(np.c_[self.np_params,np.ones(1)]))
+        return 0.5*np.abs(np.linalg.det(np.c_[self.np_params,np.ones(3)]))
 
     def __eq__(self, other):
         if not isinstance(other, triangle):

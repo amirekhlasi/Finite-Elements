@@ -70,6 +70,8 @@ class Sin(function):
         return np.sin(self.vector.dot(p.np_params) + self.c)
 
     def base_line_int(self, num = 0):
+        if np.allclose(self.a, 0.0, atol = 1e-6):
+            return np.sin(self.c)/2
         if num == 1:
             return (-np.sin(self.a + self.c) + self.a*np.cos(self.a + self.c) + np.sin(self.c))/(self.a**2)
         if num == 0:
@@ -80,9 +82,18 @@ class Sin(function):
         return Sin(self.vector.dot(T), 0, self.vector.dot(u) + self.c).base_line_int(num)*line.length()
 
     def base_triangle_int(self):
-        return ((self.a**2 - self.b**2)*np.cos(self.c) + (self.b**2)*np.cos(self.a + self.c) -
-                self.a*(self.b*(self.a - self.b)*np.sin(self.c) +
-                        self.a*np.cos(self.b + self.c)))/(self.a**2*self.b**2*(self.a - self.b))
+        a, b, c = self.a, self.b, self.c
+        if np.allclose(a, 0.0, atol = 1e-3) and np.allclose(b, 0.0, atol = 1e-3):
+            return np.sin(c)/6
+        if np.allclose(a, 0.0, atol= 1e-4):
+            return ((b**2 - 2)*np.cos(c) + 2*(b*np.sin(c) + np.cos(b + c)))/(2*b**3)
+        if np.allclose(b, 0.0, atol=1e-4):
+            return ((a**2 - 2)*np.cos(c) + 2*(a*np.sin(c) + np.cos(a + c)))/(2*a**3)
+        if np.allclose(a, b, atol=1e-4):
+            return -(a*(np.sin(a + c) + np.sin(c)) - 2*np.cos(a + c) + 2*np.cos(c))/(a**3)
+        return ((a**2 - b**2)*np.cos(c) + (b**2)*np.cos(a + c) + (a**2)*np.cos(b + c) - a*b*(a - b)*np.sin(c))/\
+               ((a**2)*(b**2)*(a - b))
+
 
     def triangle_int(self, t, p0):
         T, u = t.transport(p0)
@@ -103,6 +114,66 @@ class Sin(function):
 
     def __str__(self):
         return "sin(" + str(self.a) + "x" + " + " + str(self.b) + "y" + " + " + str(self.c) + ")"
+
+class Cos(function):
+
+    def __init__(self, a, b, c = 0.0):
+        assert all([isinstance(x, float) for x in [a,b,c]])
+        self.a = a
+        self.b = b
+        self.c = c
+        self.vector = np.array([a,b])
+
+
+    def eval(self,p):
+        return np.cos(self.vector.dot(p.np_params) + self.c)
+
+    def base_line_int(self, num = 0):
+        if np.allclose(self.a, 0.0, atol = 1e-6):
+            return np.cos(self.c)/2
+        if num == 1:
+            return (np.cos(self.a + self.c) + self.a*np.sin(self.a + self.c) - np.cos(self.c))/(self.a**2)
+        if num == 0:
+            return -(np.cos(self.a + self.c) + self.a*np.sin(self.c) - np.cos(self.c))/(self.a**2)
+
+    def segment_int(self, line, num = 0):
+        T, u = line.transport()
+        return Cos(self.vector.dot(T), 0, self.vector.dot(u) + self.c).base_line_int(num)*line.length()
+
+    def base_triangle_int(self):
+        a, b, c = self.a, self.b, self.c
+        if np.allclose(a, 0.0, atol = 1e-3) and np.allclose(b, 0.0, atol = 1e-3):
+            return np.cos(c)/6
+        if np.allclose(a, 0.0, atol= 1e-4):
+            return -((b**2 - 2)*np.sin(c) + 2*np.sin(b+c) - 2*b*np.cos(c))/(2*b**3)
+        if np.allclose(b, 0.0, atol=1e-4):
+            return -((a**2 - 2)*np.sin(c) + 2*np.sin(a + c) - 2*a*np.cos(c))/(2*a**3)
+        if np.allclose(a, b, atol=1e-4):
+            return -(a*(np.cos(a + c) + np.cos(c)) - 2*np.sin(a + c) + 2*np.sin(c))/(a**3)
+        return ((b**2 - a**2)*np.sin(c) - (b**2)*np.sin(a + c) + (a**2)*np.sin(b + c) - a*b*(a - b)*np.cos(c))/\
+               ((a**2)*(b**2)*(a - b))
+
+
+    def triangle_int(self, t, p0):
+        T, u = t.transport(p0)
+        v = self.vector.dot(T)
+        c = self.vector.dot(u) + self.c
+        return Cos(v[0], v[1], c).base_triangle_int()*np.linalg.det(T)
+
+    def __eq__(self, other):
+        if isinstance(other, Cos):
+            return self.vector == other.vector and self.c == other.c
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __repr__(self):
+        return "cos(" + str(self.a) + "x" + " + " + str(self.b) + "y" + " + " + str(self.c) + ")"
+
+    def __str__(self):
+        return "cos(" + str(self.a) + "x" + " + " + str(self.b) + "y" + " + " + str(self.c) + ")"
+
 
 
 
@@ -131,7 +202,10 @@ class element(function):
     def grad(self, t):
         if t not in self.triangles:
             return np.array([0.0, 0.0])
-        A = t.np_params[t.np_params != self.point.np_params] - self.point.np_params
+        rows = [True]*3
+        i = t.points.index(self.point)
+        rows[i] = False
+        A = t.np_params[rows] - self.point.np_params
         return np.linalg.inv(A).dot(np.array([1.0, 1.0]))
 
     def int(self, func):

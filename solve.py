@@ -41,7 +41,8 @@ class solve(object):
     def __solve__(self):
         A = self.main_matrix + self.grad_matrix
         b = self.main_res_vector + self.boundary_res_vector
-        self.coefficients = lsolver.bicgstab(A, b)
+        self.coefficients, self.res = lsolver.bicg(A, b)
+        self.coefficients = np.array(self.coefficients)
 
     def eval(self, p):
         if not self.tr.inside(p):

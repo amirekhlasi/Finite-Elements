@@ -15,7 +15,7 @@ class triangulation(object):
 
     def triangle(self, p):
         for t in self.triangles:
-            if t.inside(p):
+            if t.isinside(p):
                 return t
         return None
 
@@ -29,6 +29,7 @@ class triangulation(object):
 
 class rectangle_triangulation(triangulation):
     def __init__(self, rec, x_mesh_num, y_mesh_num):
+        rec = tuple(rec)
         assert isinstance(rec, tuple)
         assert all([isinstance(p, gm.point) for p in rec])
         assert all(rec[0].np_params < rec[1].np_params)
@@ -77,7 +78,7 @@ class rectangle_triangulation(triangulation):
         col2 = [row[self.x_mesh_num] for row in self.skeleton_points]
         boundary = [row1, col2, row2, col1]
         for row in boundary:
-            for i in range(len(row)):
+            for i in range(len(row) - 1):
                 l = [row[i], row[i + 1]]
                 seg = gm.segment(l)
                 self.boundary.append(seg)
@@ -87,7 +88,7 @@ class rectangle_triangulation(triangulation):
         self.point_dictionary = {p: i for i, p in enumerate(self.points)}
 
     def inside(self, p):
-        if all(self.rec[0].np_params <= p.np_params <= self.rec[1].np_params):
+        if (self.rec[0].np_params <= p.np_params).all() and (self.rec[1].np_params >= p.np_params).all():
             return True
         return False
 
